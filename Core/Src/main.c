@@ -1,20 +1,20 @@
 /* USER CODE BEGIN Header */
 /**
-  ******************************************************************************
-  * @file           : main.c
-  * @brief          : Main program body
-  ******************************************************************************
-  * @attention
-  *
-  * Copyright (c) 2025 STMicroelectronics.
-  * All rights reserved.
-  *
-  * This software is licensed under terms that can be found in the LICENSE file
-  * in the root directory of this software component.
-  * If no LICENSE file comes with this software, it is provided AS-IS.
-  *
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file           : main.c
+ * @brief          : Main program body
+ ******************************************************************************
+ * @attention
+ *
+ * Copyright (c) 2025 STMicroelectronics.
+ * All rights reserved.
+ *
+ * This software is licensed under terms that can be found in the LICENSE file
+ * in the root directory of this software component.
+ * If no LICENSE file comes with this software, it is provided AS-IS.
+ *
+ ******************************************************************************
+ */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
@@ -58,14 +58,15 @@ volatile double dist;
 // UART Parsing data
 typedef struct UART_RX_T
 {
-	door_operation_t op;
-	door_seat_t seat;
-}uart_rx_t;
+  door_operation_t op;
+  // door_seat_t seat;
+  uint8_t seat;
+} uart_rx_t;
 volatile uart_rx_t rx_msg;
 uint8_t rx_data[2];
 uint8_t tx_data[3];
 // door[0] = Front door / door[1] = Back door
-door_t door[2] = { {Front, Close, Lock, Idle}, {Back, Close, Lock, Idle} };
+door_t door[2] = {{Front, Close, Lock, Idle}, {Back, Close, Lock, Idle}};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -78,7 +79,8 @@ static void MX_TIM2_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_TIM6_Init(void);
 /* USER CODE BEGIN PFP */
-void make_uart_data(door_t* door)
+void make_uart_data(door_t *door, uint8_t flag);
+void HandleButtonEvent(char flag_button) void HandleUARTEvent(door_operation_t op);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -86,130 +88,152 @@ void make_uart_data(door_t* door)
 // EXTI call-back
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-	switch(GPIO_Pin)
-	{
-		case Echo1_Pin:
-		{
-			static volatile int ts = 0;
-			volatile int tt = htim7.Instance->CNT;								// us precision time
-			
-			if(HAL_GPIO_ReadPin(Echo_GPIO_Port, Echo1_Pin) == 1)		// Start measurement (rising edge)
-				ts = tt;
-			else																									// End measurement (falling edge)
-				dist = (((tt < ts) * 65535) + (tt - ts)) * 0.017;	// Timer tick overflow check
-			
-			break;
-		}
-		/* Door open event */
-		case Switch_Open_Pin:			// Receive 'DoorOpen'
-		{
-			int8_t flag = CheckDoor(&door[0],DoorOpen);
-			if(flag == -1)
-			{
-				/* Busy */
-			}
-			else if(flag == 1)
-			{
-				/* Cooldown */
-			}
-			else
-			{
-				flag_button = 1;						// Set flag
-			}
-			break;
-		}
-		
-		case Switch_Close_Pin:			// Receive 'DoorOpen'
-		{
-			int8_t flag = CheckDoor(&door[0],DoorClose);
-			if(flag == -1)
-			{
-				/* Busy */
-			}
-			else if(flag == 1)
-			{
-				/* Cooldown */
-			}
-			else
-			{
-				flag_button = 2;						// Set flag
-			}
-			break;
-		}
-		
-		case Switch_Lock_Pin:			// Receive 'DoorOpen'
-		{
-			int8_t flag = CheckDoor(&door[0],DoorLock);
-			if(flag == -1)
-			{
-				/* Busy */
-			}
-			else if(flag == 1)
-			{
-				/* Cooldown */
-			}
-			else
-			{
-				flag_button = 3;						// Set flag
-			}
-			break;
-		}
-		
-		case Switch_Unlock_Pin:			// Receive 'DoorOpen'
-		{
-			int8_t flag = CheckDoor(&door[0],DoorUnlock);
-			if(flag == -1)
-			{
-				/* Busy */
-			}
-			else if(flag == 1)
-			{
-				/* Cooldown */
-			}
-			else
-			{
-				flag_button = 4;						// Set flag
-			}
-			break;
-		}
-		/* Echo pin callback  */ 
-		if(GPIO_Pin == 1)		// PB4 Rising/Falling edge detected
-		{
-			
-		}
-	}
+  switch (GPIO_Pin)
+  {
+  case Echo1_Pin:
+  {
+    static volatile int ts = 0;
+    volatile int tt = htim7.Instance->CNT; // us precision time
+
+    if (HAL_GPIO_ReadPin(Echo_GPIO_Port, Echo1_Pin) == 1) // Start measurement (rising edge)
+      ts = tt;
+    else                                                // End measurement (falling edge)
+      dist = (((tt < ts) * 65535) + (tt - ts)) * 0.017; // Timer tick overflow check
+
+    break;
+  }
+  /* Door open event */
+  case Switch_Open_Pin: // Receive 'DoorOpen'
+  {
+    int8_t flag = CheckDoor(&door[0], DoorOpen);
+    if (flag == -1)
+    {
+      /* Busy */
+    }
+    else if (flag == 1)
+    {
+      /* Cooldown */
+    }
+    else
+    {
+      flag_button = 1; // Set flag
+    }
+    break;
+  }
+
+  case Switch_Close_Pin: // Receive 'DoorOpen'
+  {
+    int8_t flag = CheckDoor(&door[0], DoorClose);
+    if (flag == -1)
+    {
+      /* Busy */
+    }
+    else if (flag == 1)
+    {
+      /* Cooldown */
+    }
+    else
+    {
+      flag_button = 2; // Set flag
+    }
+    break;
+  }
+
+  case Switch_Lock_Pin: // Receive 'DoorOpen'
+  {
+    int8_t flag1 = CheckDoor(&door[0], DoorLock);
+    int8_t flag2 = CheckDoor(&door[1], DoorLock);
+
+    if (flag1 == -1 || flag2 == -1)
+    {
+      /* Busy */
+    }
+    else if (flag1 == 1 || flag2 == 1)
+    {
+      /* Cooldown */
+    }
+    else if (flag1 == 0 && flag2 == 0)
+    {
+      flag_button = 3; // Set flag
+    }
+    break;
+  }
+
+  case Switch_Unlock_Pin: // Receive 'DoorOpen'
+  {
+    int8_t flag1 = CheckDoor(&door[0], DoorLock);
+    int8_t flag2 = CheckDoor(&door[1], DoorLock);
+    if (flag1 == -1 || flag2 == -1)
+    {
+      /* Busy */
+    }
+    else if (flag1 == 1 || flag2 == 1)
+    {
+      /* Cooldown */
+    }
+    else if (flag1 == 0 && flag2 == 0)
+    {
+      flag_button = 4; // Set flag
+    }
+    break;
+  }
+    /* Echo pin callback  */
+    if (GPIO_Pin == 1) // PB4 Rising/Falling edge detected
+    {
+    }
+  }
 }
 
 // UART Callback
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
-	if (huart->Instance == USART1) // UART1
+  if (huart->Instance == USART1) // UART1
   {
-		rx_msg.op = rx_data[0] & 0x0F; // door_operation_t
-		rx_msg.seat = rx_data[1] & 0x0F; // door_seat_t
-		if(CheckDoor(&door[rx_msg.seat], rx_msg.op) == 0)
-		{
-			flag_uart = 1;
-		}
-	}
-	HAL_UART_Receive_IT(&huart1, rx_data, 3); // 3byte receive
+    rx_msg.op = rx_data[0] & 0x0F;   // door_operation_t
+    rx_msg.seat = rx_data[1] & 0x0F; // unit8_t
+
+    switch (rx_msg.seat)
+    {
+    case 0x01: // 0 door
+      if (CheckDoor(&door[0], rx_msg.op) == 0)
+      {
+        flag_uart = 1;
+      }
+      break;
+    case 0x02: // 1 door
+      if (CheckDoor(&door[1], rx_msg.op) == 0)
+      {
+        flag_uart = 1;
+      }
+      break;
+    case 0x03: // 0 & 1 door ( lock, unlock check )
+      if ((CheckDoor(&door[0], rx_msg.op) == 0) && (CheckDoor(&door[1], rx_msg.op) == 0))
+      {
+        flag_uart = 1;
+      }
+      break;
+    default:
+      break;
+    }
+  }
+  HAL_UART_Receive_IT(&huart1, rx_data, 2); // 3byte receive
 }
 /*
 // Ultrasonic sensor period : 100ms(TIM6)
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
 {
-	if(htim == &htim6)	// TIM6
-	{
-		flag_100ms = 1;		// Set flag
-	}
+   if(htim == &htim6)   // TIM6
+   {
+      flag_100ms = 1;      // Set flag
+   }
 }
 */
 /* USER CODE END 0 */
 
 /**
-  * @brief  The application entry point.
-  * @retval int
-  */
+ * @brief  The application entry point.
+ * @retval int
+ */
 int main(void)
 {
 
@@ -242,9 +266,9 @@ int main(void)
   MX_USART1_UART_Init();
   MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
-	HAL_TIM_Base_Start(&htim7);
+  HAL_TIM_Base_Start(&htim7);
 
-	HAL_UART_Receive_IT(&huart1, rx_data, 3);
+  HAL_UART_Receive_IT(&huart1, rx_data, 2);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -254,50 +278,25 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-		
-		if(flag_button)						// Door open event
-		{
-			switch(flag_button)
-			{
-				case 1: // Switch_Open_Pin
-					DoorControl(&door[0],DoorOpen);
-					make_uart_data(&door[0]);
-					HAL_UART_Transmit(&huart1, (uint8_t *) tx_data, 3, 100);
-					break;
-				case 2: // Switch_Close_Pin
-					DoorControl(&door[0],DoorClose);
-					make_uart_data(&door[0]);
-					HAL_UART_Transmit(&huart1, (uint8_t *) tx_data, 3, 100);
-					break;
-				case 3: // Switch_Lock_Pin
-					DoorControl(&door[0],DoorLock);
-					make_uart_data(&door[0]);
-					HAL_UART_Transmit(&huart1, (uint8_t *) tx_data, 3, 100);
-					break;
-				case 4: // Switch_Unlock_Pin
-					DoorControl(&door[0],DoorUnlock);
-					make_uart_data(&door[0]);
-					HAL_UART_Transmit(&huart1, (uint8_t *) tx_data, 3, 100);
-					break;
-			}
-			flag_button = 0;							// Reset flag
-		}
-		
-		if(flag_uart == 1)						// UART event
-		{
-			DoorControl(&door[rx_msg.seat], rx_msg.op);
-			make_uart_data(&door[rx_msg.seat]);
-			HAL_UART_Transmit(&huart1, (uint8_t *) tx_data, 3, 100);
-			flag_uart = 0;							// Reset flag
-		}
+
+    if (flag_button) // Door open event
+    {
+      HandleButtonEvent(flag_button);
+      flag_button = 0; // Reset flag
+    }
+
+    if (flag_uart == 1) // UART event
+    {
+      HandleUARTEvent(rx_msg.op);
+    }
   }
   /* USER CODE END 3 */
 }
 
 /**
-  * @brief System Clock Configuration
-  * @retval None
-  */
+ * @brief System Clock Configuration
+ * @retval None
+ */
 void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
@@ -305,18 +304,18 @@ void SystemClock_Config(void)
   RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 
   /** Configure the main internal regulator output voltage
-  */
+   */
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
   /** Configure LSE Drive Capability
-  */
+   */
   HAL_PWR_EnableBkUpAccess();
   __HAL_RCC_LSEDRIVE_CONFIG(RCC_LSEDRIVE_LOW);
 
   /** Initializes the RCC Oscillators according to the specified parameters
-  * in the RCC_OscInitTypeDef structure.
-  */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSE;
+   * in the RCC_OscInitTypeDef structure.
+   */
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI | RCC_OSCILLATORTYPE_LSE;
   RCC_OscInitStruct.LSEState = RCC_LSE_ON;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
@@ -327,9 +326,8 @@ void SystemClock_Config(void)
   }
 
   /** Initializes the CPU, AHB and APB buses clocks
-  */
-  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
-                              |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
+   */
+  RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
   RCC_ClkInitStruct.AHBCLKDivider = RCC_SYSCLK_DIV1;
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV1;
@@ -339,7 +337,7 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1|RCC_PERIPHCLK_RTC;
+  PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_USART1 | RCC_PERIPHCLK_RTC;
   PeriphClkInit.Usart1ClockSelection = RCC_USART1CLKSOURCE_PCLK2;
   PeriphClkInit.RTCClockSelection = RCC_RTCCLKSOURCE_LSE;
   if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInit) != HAL_OK)
@@ -349,10 +347,10 @@ void SystemClock_Config(void)
 }
 
 /**
-  * @brief ADC Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief ADC Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_ADC_Init(void)
 {
 
@@ -367,7 +365,7 @@ static void MX_ADC_Init(void)
   /* USER CODE END ADC_Init 1 */
 
   /** Configure the global features of the ADC (Clock, Resolution, Data Alignment and number of conversion)
-  */
+   */
   hadc.Instance = ADC1;
   hadc.Init.OversamplingMode = DISABLE;
   hadc.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV1;
@@ -391,7 +389,7 @@ static void MX_ADC_Init(void)
   }
 
   /** Configure for the selected ADC regular channel to be converted.
-  */
+   */
   sConfig.Channel = ADC_CHANNEL_0;
   sConfig.Rank = ADC_RANK_CHANNEL_NUMBER;
   if (HAL_ADC_ConfigChannel(&hadc, &sConfig) != HAL_OK)
@@ -401,14 +399,13 @@ static void MX_ADC_Init(void)
   /* USER CODE BEGIN ADC_Init 2 */
 
   /* USER CODE END ADC_Init 2 */
-
 }
 
 /**
-  * @brief RTC Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief RTC Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_RTC_Init(void)
 {
 
@@ -421,7 +418,7 @@ static void MX_RTC_Init(void)
   /* USER CODE END RTC_Init 1 */
 
   /** Initialize RTC Only
-  */
+   */
   hrtc.Instance = RTC;
   hrtc.Init.HourFormat = RTC_HOURFORMAT_24;
   hrtc.Init.AsynchPrediv = 127;
@@ -437,14 +434,13 @@ static void MX_RTC_Init(void)
   /* USER CODE BEGIN RTC_Init 2 */
 
   /* USER CODE END RTC_Init 2 */
-
 }
 
 /**
-  * @brief TIM2 Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief TIM2 Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_TIM2_Init(void)
 {
 
@@ -500,14 +496,13 @@ static void MX_TIM2_Init(void)
 
   /* USER CODE END TIM2_Init 2 */
   HAL_TIM_MspPostInit(&htim2);
-
 }
 
 /**
-  * @brief TIM6 Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief TIM6 Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_TIM6_Init(void)
 {
 
@@ -538,14 +533,13 @@ static void MX_TIM6_Init(void)
   /* USER CODE BEGIN TIM6_Init 2 */
 
   /* USER CODE END TIM6_Init 2 */
-
 }
 
 /**
-  * @brief TIM7 Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief TIM7 Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_TIM7_Init(void)
 {
 
@@ -576,14 +570,13 @@ static void MX_TIM7_Init(void)
   /* USER CODE BEGIN TIM7_Init 2 */
 
   /* USER CODE END TIM7_Init 2 */
-
 }
 
 /**
-  * @brief USART1 Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief USART1 Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_USART1_UART_Init(void)
 {
 
@@ -611,19 +604,18 @@ static void MX_USART1_UART_Init(void)
   /* USER CODE BEGIN USART1_Init 2 */
 
   /* USER CODE END USART1_Init 2 */
-
 }
 
 /**
-  * @brief GPIO Initialization Function
-  * @param None
-  * @retval None
-  */
+ * @brief GPIO Initialization Function
+ * @param None
+ * @retval None
+ */
 static void MX_GPIO_Init(void)
 {
   GPIO_InitTypeDef GPIO_InitStruct = {0};
-/* USER CODE BEGIN MX_GPIO_Init_1 */
-/* USER CODE END MX_GPIO_Init_1 */
+  /* USER CODE BEGIN MX_GPIO_Init_1 */
+  /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOC_CLK_ENABLE();
@@ -635,10 +627,10 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, Lock_Back_Pin|Lock_Front_Pin|Ultrasonic_Trig_Front_Pin|Ultrasonic_Trig_Back_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, Lock_Back_Pin | Lock_Front_Pin | Ultrasonic_Trig_Front_Pin | Ultrasonic_Trig_Back_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : USART_TX_Pin USART_RX_Pin */
-  GPIO_InitStruct.Pin = USART_TX_Pin|USART_RX_Pin;
+  GPIO_InitStruct.Pin = USART_TX_Pin | USART_RX_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
@@ -661,14 +653,14 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pins : Lock_Back_Pin Lock_Front_Pin Ultrasonic_Trig_Front_Pin Ultrasonic_Trig_Back_Pin */
-  GPIO_InitStruct.Pin = Lock_Back_Pin|Lock_Front_Pin|Ultrasonic_Trig_Front_Pin|Ultrasonic_Trig_Back_Pin;
+  GPIO_InitStruct.Pin = Lock_Back_Pin | Lock_Front_Pin | Ultrasonic_Trig_Front_Pin | Ultrasonic_Trig_Back_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
   /*Configure GPIO pins : Switch_Open_Pin Switch_Close_Pin Switch_Unlock_Pin */
-  GPIO_InitStruct.Pin = Switch_Open_Pin|Switch_Close_Pin|Switch_Unlock_Pin;
+  GPIO_InitStruct.Pin = Switch_Open_Pin | Switch_Close_Pin | Switch_Unlock_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
@@ -680,7 +672,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(Switch_Lock_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : Stuck_Front_Pin Stuck_Back_Pin */
-  GPIO_InitStruct.Pin = Stuck_Front_Pin|Stuck_Back_Pin;
+  GPIO_InitStruct.Pin = Stuck_Front_Pin | Stuck_Back_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
@@ -701,24 +693,75 @@ static void MX_GPIO_Init(void)
   HAL_NVIC_SetPriority(EXTI4_15_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI4_15_IRQn);
 
-/* USER CODE BEGIN MX_GPIO_Init_2 */
-/* USER CODE END MX_GPIO_Init_2 */
+  /* USER CODE BEGIN MX_GPIO_Init_2 */
+  /* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
 // make uart data(tx_data)
-void make_uart_data(door_t* door)
+void HandleUARTEvent(door_operation_t op)
 {
-	tx_data[0] = 0x20;
-	tx_data[1] = door->seat;
-	tx_data[2] = ((door->lock) << 4) | (door->door);
+  if ((op == DoorLock) || (op == DoorUnlock))
+  {
+    // close
+    DoorControl(&door[0], op);
+    DoorControl(&door[1], op);
+
+    make_uart_data(&door[0], 1); // op 0, 1 door
+  }
+  else
+  {
+    // rx_msg.seat : door idx
+    DoorControl(&door[rx_msg.seat - 1], op);
+    make_uart_data(&door[rx_msg.seat - 1], 0);
+  }
+
+  HAL_UART_Transmit(&huart1, tx_data, 3, 100);
+  flag_uart = 0; // Reset flag
+}
+
+void HandleButtonEvent(char flag_button)
+{
+  switch (flag_button)
+  {
+  case 1: // Switch_Open_Pin
+    DoorControl(&door[0], DoorOpen);
+    break;
+  case 2: // Switch_Close_Pin
+    DoorControl(&door[0], DoorClose);
+    break;
+  case 3: // Switch_Lock_Pin
+    DoorControl(&door[0], DoorLock);
+    DoorControl(&door[1], DoorLock);
+  break
+
+      case 4: // Switch_Unlock_Pin
+    DoorControl(&door[0], DoorUnlock);
+    DoorControl(&door[1], DoorUnlock);
+    break;
+  default:
+    break;
+  }
+
+  make_uart_data(&door[0], 0);
+  HAL_UART_Transmit(&huart1, (uint8_t *)tx_data, 3, 100);
+}
+
+void make_uart_data(door_t *door, uint8_t flag)
+{
+  tx_data[0] = 0x20;
+  if (flag)
+    tx_data[1] = 0x03;
+  else
+    tx_data[1] = door->seat;
+  tx_data[2] = ((door->lock) << 4) | (door->door);
 }
 /* USER CODE END 4 */
 
 /**
-  * @brief  This function is executed in case of error occurrence.
-  * @retval None
-  */
+ * @brief  This function is executed in case of error occurrence.
+ * @retval None
+ */
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
@@ -730,14 +773,14 @@ void Error_Handler(void)
   /* USER CODE END Error_Handler_Debug */
 }
 
-#ifdef  USE_FULL_ASSERT
+#ifdef USE_FULL_ASSERT
 /**
-  * @brief  Reports the name of the source file and the source line number
-  *         where the assert_param error has occurred.
-  * @param  file: pointer to the source file name
-  * @param  line: assert_param error line source number
-  * @retval None
-  */
+ * @brief  Reports the name of the source file and the source line number
+ *         where the assert_param error has occurred.
+ * @param  file: pointer to the source file name
+ * @param  line: assert_param error line source number
+ * @retval None
+ */
 void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
