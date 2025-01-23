@@ -1,13 +1,28 @@
 #ifndef __ULTRASONIC__H
 #define __ULTRASONIC__H
 
-#define Trig_GPIO_Port	GPIOB
-#define Trig_Pin				GPIO_PIN_5
-#define Echo_GPIO_Port	GPIOB
-#define Echo_Pin				GPIO_PIN_4
+#include <stdint.h>
 
-extern void Ultrasonic();
+#define Trig_GPIO_Port		GPIOB
+#define Trig_Front_Pin		GPIO_PIN_5		// (CN9) D4
+#define Trig_Back_Pin			GPIO_PIN_10		// (CN9) D6
+
+#define Echo_GPIO_Port		GPIOB
+#define Echo_Front_Pin		GPIO_PIN_4		// (CN9) D5
+#define Echo_Back_Pin			GPIO_PIN_6		// (CN9) D10
+
+#define Result_GPIO_Port	GPIOA
+#define Result_Front_Pin	GPIO_PIN_7		// (CN9) D11
+#define Result_Back_Pin		GPIO_PIN_6		// (CN9) D12
+
+typedef enum Seat
+{
+	Front,
+	Back
+}seat_t;
+
+extern void UltraSonic();
 extern void SignalTrig();
-extern void usdelay(unsigned short time);
+extern void usdelay(uint16_t time);
 
 #endif

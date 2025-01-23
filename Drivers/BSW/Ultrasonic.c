@@ -4,75 +4,25 @@
 #define LD2_GPIO_Port		GPIOA
 #define LD2_Pin					GPIO_PIN_5
 
-/* Extern variable in main.c */
-extern TIM_HandleTypeDef htim6;
+/* Extern variables in main.c */
 extern TIM_HandleTypeDef htim7;
-
-extern volatile double dist;
-extern volatile char flag_100ms;
-/* Extern variable in main.c */
-
-// Counter tick
-volatile int cnt_100ms;
+extern volatile uint8_t flag_done[2];
+extern volatile double dist[2];
+/* Extern variables in main.c */
 
 // ULTRASONIC FUNC
-void Ultrasonic()
+void UltraSonic()
 {
-	int cnt = 0;
-	
 	// First 10cm check
 	SignalTrig();
-	if(dist < 10)					// Obstacle detected
-	{
-		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 1);
-		HAL_Delay(100);
-		HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 0);
-		HAL_Delay(100);
-		return;							// Door state not changed (x,0) -> (x,0)
-	}
 	
-	// Obstacle not detected : door state change (x,0) -> (1,1)
-	HAL_TIM_Base_Start_IT(&htim6);				// Start 100ms timer
-	while(cnt < 15)												// Req time for fully open (1.5s)
-	{
-		if(flag_100ms == 1)									// Trig signal period : TIM6(100ms)
-		{
-			flag_100ms = 0;										// Flag reset
-			SignalTrig();											// Send trigger signal
-			
-			if(dist >= 10)										// Safety distance (distance >= 10)
-			{
-				cnt += !cnt_100ms;							// if(cnt_100ms == 0) cnt++;
-				cnt_100ms -= (cnt_100ms > 0);		// if(cnt_100ms > 0) cnt_100ms--;
-			}
-			else
-			{
-				cnt_100ms = 10;									// Wait (1s) until obstacle is gone
-			}
-		}
-	}
+	// Send obstacle detection results to the Master STM board
+	uint32_t result_front, result_back;
 	
-	// Door fully opened : Stop 100ms counter
-	HAL_TIM_Base_Stop_IT(&htim6);
-	__HAL_TIM_SET_COUNTER(&htim6, 0);
-	
-	// (Transmit 'DoorStateChanged')
-	HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 1);
-	HAL_Delay(100);
-	HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 0);
-	HAL_Delay(100);
-	HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 1);
-	HAL_Delay(100);
-	HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 0);
-	HAL_Delay(100);
-	HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 1);
-	HAL_Delay(100);
-	HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 0);
-	HAL_Delay(100);
-	HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 1);
-	HAL_Delay(100);
-	HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 0);
-	HAL_Delay(100);
+	result_front = (dist[Front] <= 10 ? Result_Front_Pin : 0);
+	result_back = (dist[Back] <= 10 ? Result_Back_Pin : 0);
+	Result_GPIO_Port->ODR &= ~(Result_Front_Pin | Result_Back_Pin);
+	Result_GPIO_Port->ODR |= (result_front | result_back);
 	
 	return;
 }
@@ -80,17 +30,19 @@ void Ultrasonic()
 // Ultrasonic trigger signal
 void SignalTrig()
 {
-	// Trigger signal
-	HAL_GPIO_WritePin(Trig_GPIO_Port, Trig_Pin, 1);
+	// Front & Back trigger signal
+	Trig_GPIO_Port->ODR |= (Trig_Front_Pin | Trig_Back_Pin);
 	usdelay(10);		// 10us delay
-	HAL_GPIO_WritePin(Trig_GPIO_Port, Trig_Pin, 0);
+	Trig_GPIO_Port->ODR &= ~(Trig_Front_Pin | Trig_Back_Pin);
 	
-	// Wait for echo signal ((4m*2) / 340m/s = 25ms (include margin))
-	HAL_Delay(25);
+	flag_done[Front] = flag_done[Back] = 0;
+	
+	// Wait until echo signal received
+	while(flag_done[Front] == 0 || flag_done[Back] == 0);
 }
 
 // Polling version usdelay(TIM7)
-void usdelay(unsigned short time)
+void usdelay(uint16_t time)
 {
 	__HAL_TIM_SET_COUNTER(&htim7, 0);							// Counter initialize to 0
 	while(__HAL_TIM_GET_COUNTER(&htim7) < time);	// time(us) delay
