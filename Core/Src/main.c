@@ -23,7 +23,6 @@
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
 #include "../../Drivers/BSW/Ultrasonic.h"
-#include "../../Drivers/BSW/Hvac.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -69,9 +68,11 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	switch(GPIO_Pin)
 	{
 		/* hvac event */
+		/*
 		case B1_Pin:
 			flag_hvac = 1;						// Set flag
 			break;
+		*/
 		
 		/* Ultrasonic echo received */ 
 		case Echo_Front_Pin:
@@ -151,11 +152,6 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 		UltraSonic();									// Run ultrasonic
-		if(flag_hvac == 1)
-		{
-			Hvac();
-			flag_hvac = 0;
-		}
 		HAL_Delay(75);
   }
   /* USER CODE END 3 */

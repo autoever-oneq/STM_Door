@@ -30,12 +30,13 @@ void UltraSonic()
 // Ultrasonic trigger signal
 void SignalTrig()
 {
+	// Reset done flags
+	flag_done[Front] = flag_done[Back] = 0;
+	
 	// Front & Back trigger signal
 	Trig_GPIO_Port->ODR |= (Trig_Front_Pin | Trig_Back_Pin);
 	usdelay(10);		// 10us delay
 	Trig_GPIO_Port->ODR &= ~(Trig_Front_Pin | Trig_Back_Pin);
-	
-	flag_done[Front] = flag_done[Back] = 0;
 	
 	// Wait until echo signal received
 	while(flag_done[Front] == 0 || flag_done[Back] == 0);
