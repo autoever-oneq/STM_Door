@@ -44,8 +44,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
 		if ((Buffer1 == 0x13)&&(Buffer2 ==0x02)){
 			DoorCloseCommand(&Door2);
 		}	
-		//uart1_rx_data[0] = 0;
-		//uart1_rx_data[1] = 0;
 	}
 	
 	if(UartHandle == &huart2) {

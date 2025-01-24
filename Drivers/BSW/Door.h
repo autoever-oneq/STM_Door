@@ -9,13 +9,6 @@ typedef enum DoorPos_t{
 	REAR
 }DoorPos;
 
-typedef enum DoorStatus_t{
-	OPEN,
-	RUNNING,
-	END
-}DoorStatus;
-
-
 typedef struct DoorInfo_t{
 	MotorInfo *ServoMotor;
 	DoorPos DoorPos;
@@ -26,7 +19,6 @@ typedef struct DoorInfo_t{
 	uint8_t OpenFlag;
 	uint8_t CloseFlag;
 	uint8_t IsObstacle;
-	DoorStatus DoorStatus;
 }DoorInfo;
 
 extern DoorInfo Door1;

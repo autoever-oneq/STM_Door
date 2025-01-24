@@ -28,10 +28,11 @@ void MotorStop(MotorInfo *ServoMotor){
 		uart1_tx_data[0] = ;
 	}
 	*/
+	/*
 	if (ServoMotor->state == MOTOR_CLOSE){
 		
 	}
-
+	*/
 	ServoMotor->state = MOTOR_STOP;
 	ServoMotor->TargetAngle = ServoMotor->CurrentAngle;
 	MotorSetRotation(ServoMotor);

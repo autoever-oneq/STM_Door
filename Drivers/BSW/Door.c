@@ -53,7 +53,6 @@ void DoorActuate(DoorInfo *Door){
 		Door->IsObstacle = HAL_GPIO_ReadPin(Door->UltraPort,Door->UltraPin);
 		if (!Door->IsObstacle){
 			if(Door->OpenFlag){
-				//after receiving open flag
 				DoorOpen(Door);
 				MotorActuate(Door->ServoMotor);		
 			}
@@ -73,13 +72,6 @@ void DoorLockCommand(void){
 			Door2.LockFlag = 1;
 			Door2.UnlockFlag = 0;	
 	}
-	/*
-	uart1_tx_data[0] = 0x20;
-	uart1_tx_data[1] = 0x03;
-	uart1_tx_data[2] = 0x00;
-	HAL_UART_Transmit(&huart1,uart1_tx_data,3,300);
-	//UartTxBufferClear();
-	*/
 	UartTx(0x20,0x03, 0x00);
 }
 
@@ -109,9 +101,9 @@ void DoorCloseCommand(DoorInfo *Door) {
 void DoorOpenCommand(DoorInfo *Door) {
 	if(Door->OpenFlag == 1) return;
 	if (Door->UnlockFlag){
-				Door->OpenFlag = 1;
-				Door->CloseFlag = 0;	
-			}	
+		Door->OpenFlag = 1;
+		Door->CloseFlag = 0;	
+	}	
 	if (Door == &Door1){
 		UartTx(0x20,0x01, 0x11);
 	}

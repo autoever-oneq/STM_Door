@@ -488,37 +488,16 @@ void AppTask1ms(void)
 
 void AppTask10ms(void)
 {
-	
 }
 
 void AppTask100ms(void)
 {
-	/*
-		if(flag_open == 1){
-			MotorSetTargetAngle(&Motor1, 170);
-			if (Motor1.TargetAngle == Motor1.CurrentAngle){
-				flag_open = 0;
-				HAL_GPIO_TogglePin(LD2_GPIO_Port,LD2_Pin);
-			}
-		}
-		if(flag_close == 1){
-			MotorSetTargetAngle(&Motor1, 90);
-			//MotorSetTargetAngle(&Motor2, 90);		
-			if (Motor1.TargetAngle == Motor1.CurrentAngle){
-				flag_close = 0;
-			}
-		}
-		*/
-		//MotorActuate(&Motor1);
 		DoorActuate(&Door1);
-		DoorActuate(&Door2);
-	
-		
+		DoorActuate(&Door2);	
 }
 
 void AppTask1000ms(void)
 {
-    //HAL_GPIO_TogglePin(LD2_GPIO_Port,LD2_Pin);
 }
 
 
