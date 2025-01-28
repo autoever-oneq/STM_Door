@@ -1,9 +1,6 @@
 #include "stm32l0xx_hal.h"
 #include "Ultrasonic.h"
 
-#define LD2_GPIO_Port		GPIOA
-#define LD2_Pin					GPIO_PIN_5
-
 /* Extern variables in main.c */
 extern TIM_HandleTypeDef htim7;
 extern volatile uint8_t flag_done[2];
@@ -19,10 +16,10 @@ void UltraSonic()
 	// Send obstacle detection results to the Master STM board
 	uint32_t result_front, result_back;
 	
-	result_front = (dist[Front] <= 10 ? Result_Front_Pin : 0);
-	result_back = (dist[Back] <= 10 ? Result_Back_Pin : 0);
-	Result_GPIO_Port->ODR &= ~(Result_Front_Pin | Result_Back_Pin);
-	Result_GPIO_Port->ODR |= (result_front | result_back);
+	result_front = (dist[Front] <= 10 ? Ultrasonic_Result_Front_Pin : 0);
+	result_back = (dist[Back] <= 10 ? Ultrasonic_Result_Back_Pin : 0);
+	Ultrasonic_Result_GPIO_Port->ODR &= ~(Ultrasonic_Result_Front_Pin | Ultrasonic_Result_Back_Pin);
+	Ultrasonic_Result_GPIO_Port->ODR |= (result_front | result_back);
 	
 	return;
 }
