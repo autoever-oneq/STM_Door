@@ -67,7 +67,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 	static volatile int sf = 0, sb = 0, ef, eb;
 	
 	switch(GPIO_Pin)
-	{				
+	{
 		/* Ultrasonic echo received */ 
 		case Echo_Front_Pin:
 			ef = htim7.Instance->CNT;
@@ -81,7 +81,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 				flag_done[Front] = 1;
 			}
 			break;
-			
 		case Echo_Back_Pin:
 			eb = htim7.Instance->CNT;
 			if(HAL_GPIO_ReadPin(Echo_GPIO_Port, Echo_Back_Pin) == GPIO_PIN_SET)		// Start measurement (rising edge)
@@ -94,27 +93,29 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 				flag_done[Back] = 1;
 			}
 			break;
-		
+			
+		/* Stuck signal received */ 
 		case Stuck_Input_Front_Pin:
 			if(HAL_GPIO_ReadPin(Stuck_GPIO_Port, Stuck_Input_Front_Pin) == GPIO_PIN_SET)
 			{
-				HAL_TIM_Base_Start_IT(&htim3);
+				HAL_TIM_Base_Start_IT(&htim3);		// Timer start
 			}
 			else
 			{
+				// Reset timer & flag
 				HAL_TIM_Base_Stop_IT(&htim3);
 				__HAL_TIM_SET_COUNTER(&htim3, 0);
 				HAL_GPIO_WritePin(Stuck_GPIO_Port, Stuck_Result_Front_Pin, GPIO_PIN_RESET);
 			}
 			break;
-		
 		case Stuck_Input_Back_Pin:
 			if(HAL_GPIO_ReadPin(Stuck_GPIO_Port, Stuck_Input_Back_Pin) == GPIO_PIN_SET)
 			{
-				HAL_TIM_Base_Start_IT(&htim6);
+				HAL_TIM_Base_Start_IT(&htim6);		// Timer start
 			}
 			else
 			{
+				// Reset timer & flag
 				HAL_TIM_Base_Stop_IT(&htim6);
 				__HAL_TIM_SET_COUNTER(&htim6, 0);
 				HAL_GPIO_WritePin(Stuck_GPIO_Port, Stuck_Result_Back_Pin, GPIO_PIN_RESET);
@@ -173,7 +174,7 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 		UltraSonic();									// Run ultrasonic
-		HAL_Delay(70);
+		HAL_Delay(70);								// Delay for system stabilization
   }
   /* USER CODE END 3 */
 }

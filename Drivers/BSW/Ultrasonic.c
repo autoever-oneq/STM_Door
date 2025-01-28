@@ -16,8 +16,9 @@ void UltraSonic()
 	// Send obstacle detection results to the Master STM board
 	uint32_t result_front, result_back;
 	
-	result_front = (dist[Front] <= 10 ? Ultrasonic_Result_Front_Pin : 0);
-	result_back = (dist[Back] <= 10 ? Ultrasonic_Result_Back_Pin : 0);
+	// Forward obstacle detection result to main STM32
+	result_front = (dist[Front] <= 10) * Ultrasonic_Result_Front_Pin;
+	result_back = (dist[Back] <= 10) * Ultrasonic_Result_Back_Pin;
 	Ultrasonic_Result_GPIO_Port->ODR &= ~(Ultrasonic_Result_Front_Pin | Ultrasonic_Result_Back_Pin);
 	Ultrasonic_Result_GPIO_Port->ODR |= (result_front | result_back);
 	
@@ -26,7 +27,7 @@ void UltraSonic()
 
 // Ultrasonic trigger signal
 void SignalTrig()
-{
+{	
 	// Reset done flags
 	flag_done[Front] = flag_done[Back] = 0;
 	
